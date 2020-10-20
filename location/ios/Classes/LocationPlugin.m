@@ -6,6 +6,10 @@
 #import <CoreLocation/CoreLocation.h>
 #endif
 
+#ifndef PERMISSION_LOCATION_ALWAYS
+    #define PERMISSION_LOCATION_ALWAYS 1
+#endif
+
 @interface LocationPlugin() <FlutterStreamHandler, CLLocationManagerDelegate>
 @property (strong, nonatomic) CLLocationManager *clLocationManager;
 @property (copy, nonatomic)   FlutterResult      flutterResult;
@@ -169,9 +173,11 @@
     if ([[NSBundle mainBundle] objectForInfoDictionaryKey:@"NSLocationWhenInUseUsageDescription"] != nil) {
         [self.clLocationManager requestWhenInUseAuthorization];
     }
-    else if ([[NSBundle mainBundle] objectForInfoDictionaryKey:@"NSLocationAlwaysUsageDescription"] != nil) {
-        [self.clLocationManager requestAlwaysAuthorization];
-    }
+    #ifdef PERMISSION_LOCATION_ALWAYS
+        else if ([[NSBundle mainBundle] objectForInfoDictionaryKey:@"NSLocationAlwaysUsageDescription"] != nil) {
+            [self.clLocationManager requestAlwaysAuthorization];
+        }
+    #endif
 #endif
     else {
         [NSException raise:NSInternalInconsistencyException format:
