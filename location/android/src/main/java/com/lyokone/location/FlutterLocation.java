@@ -14,7 +14,10 @@ import android.location.OnNmeaMessageListener;
 import android.os.Build;
 import android.os.Looper;
 import android.util.Log;
-
+import android.util.SparseArray;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -28,21 +31,14 @@ import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-
-import java.util.HashMap;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
 import io.flutter.plugin.common.EventChannel.EventSink;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
+import java.util.HashMap;
 
-class FlutterLocation
+public class FlutterLocation
         implements PluginRegistry.RequestPermissionsResultListener, PluginRegistry.ActivityResultListener {
     private static final String TAG = "FlutterLocation";
-
-    private final Context applicationContext;
 
     @Nullable
     public Activity activity;
@@ -82,7 +78,7 @@ class FlutterLocation
     private boolean waitingForPermission = false;
     private final LocationManager locationManager;
 
-    public HashMap<Integer, Integer> mapFlutterAccuracy = new HashMap<Integer, Integer>() {
+    public SparseArray<Integer> mapFlutterAccuracy = new SparseArray<Integer>() {
         {
             put(0, LocationRequest.PRIORITY_NO_POWER);
             put(1, LocationRequest.PRIORITY_LOW_POWER);
@@ -93,24 +89,30 @@ class FlutterLocation
     };
 
     FlutterLocation(Context applicationContext, @Nullable Activity activity) {
-        this.applicationContext = applicationContext;
         this.activity = activity;
         this.locationManager = (LocationManager) applicationContext.getSystemService(Context.LOCATION_SERVICE);
     }
 
-    FlutterLocation(PluginRegistry.Registrar registrar) {
-        this(registrar.context(), registrar.activity());
-        registrar.addRequestPermissionsResultListener(this);
-    }
-
     void setActivity(@Nullable Activity activity) {
         this.activity = activity;
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(activity);
-        mSettingsClient = LocationServices.getSettingsClient(activity);
+        if (this.activity != null) {
+            mFusedLocationClient = LocationServices.getFusedLocationProviderClient(activity);
+            mSettingsClient = LocationServices.getSettingsClient(activity);
 
-        createLocationCallback();
-        createLocationRequest();
-        buildLocationSettingsRequest();
+            createLocationCallback();
+            createLocationRequest();
+            buildLocationSettingsRequest();
+        } else {
+            if (mFusedLocationClient != null) {
+                mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+            }
+            mFusedLocationClient = null;
+            mSettingsClient = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && locationManager != null) {
+                locationManager.removeNmeaListener(mMessageListener);
+                mMessageListener = null;
+            }
+        }
     }
 
     @Override
@@ -238,7 +240,10 @@ class FlutterLocation
                 if (events != null) {
                     events.success(loc);
                 } else {
-                    mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+                    if (mFusedLocationClient != null) {
+                        mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+                    }
+                    mFusedLocationClient = null;
                 }
             }
         };
@@ -295,9 +300,9 @@ class FlutterLocation
         if (this.activity == null) {
             throw new ActivityNotFoundException();
         }
-        this.locationPermissionState = ActivityCompat.checkSelfPermission(activity,
+        int locationPermissionState = ActivityCompat.checkSelfPermission(activity,
                 Manifest.permission.ACCESS_FINE_LOCATION);
-        return this.locationPermissionState == PackageManager.PERMISSION_GRANTED;
+        return locationPermissionState == PackageManager.PERMISSION_GRANTED;
     }
 
     public void requestPermissions() {
@@ -318,7 +323,7 @@ class FlutterLocation
 
     /** Checks whether location services is enabled. */
     public boolean checkServiceEnabled() {
-        boolean gps_enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);;
+        boolean gps_enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         boolean network_enabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
         return gps_enabled || network_enabled;
@@ -382,8 +387,7 @@ class FlutterLocation
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                             locationManager.addNmeaListener(mMessageListener);
                         }
-                        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback,
-                                Looper.myLooper());
+                        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
                     }
                 }).addOnFailureListener(activity, new OnFailureListener() {
                     @Override

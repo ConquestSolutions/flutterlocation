@@ -19,6 +19,7 @@
 @property (copy, nonatomic)   FlutterEventSink   flutterEventSink;
 @property (assign, nonatomic) BOOL               flutterListening;
 @property (assign, nonatomic) BOOL               hasInit;
+@property (assign, nonatomic) BOOL               applicationHasLocationBackgroundMode;
 @end
 
 @implementation LocationPlugin
@@ -52,6 +53,9 @@
     if (!(self.hasInit)) {
         self.hasInit = YES;
 
+        NSArray *backgroundModes = [NSBundle.mainBundle objectForInfoDictionaryKey:@"UIBackgroundModes"];
+        self.applicationHasLocationBackgroundMode = [backgroundModes containsObject: @"location"];
+
         if ([CLLocationManager locationServicesEnabled]) {
             self.clLocationManager = [[CLLocationManager alloc] init];
             self.clLocationManager.delegate = self;
@@ -80,6 +84,21 @@
             }
             self.clLocationManager.distanceFilter = distanceFilter;
             result(@1);
+        }
+    } else if ([call.method isEqualToString:@"isBackgroundModeEnabled"]) {
+        if (self.applicationHasLocationBackgroundMode) {
+            result(self.clLocationManager.allowsBackgroundLocationUpdates ? @1 : @0);
+        } else {
+            result(@0);
+        }
+    } else if ([call.method isEqualToString:@"enableBackgroundMode"]) {
+        BOOL enable = [call.arguments[@"enable"] boolValue];
+        if (self.applicationHasLocationBackgroundMode) {
+            self.clLocationManager.allowsBackgroundLocationUpdates = enable;
+            self.clLocationManager.showsBackgroundLocationIndicator = enable;
+            result(enable ? @1 : @0);
+        } else {
+            result(@0);
         }
     } else if ([call.method isEqualToString:@"getLocation"]) {
         if (![CLLocationManager locationServicesEnabled]) {

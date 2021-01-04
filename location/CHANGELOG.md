@@ -1,9 +1,22 @@
+## [3.2.1] 23rd December 2020
+
+- Fix crash during build
+
+## [3.2.0] 23rd December 2020
+
+- Add the ability to launch location notifications when application is in background
+  - on iOS implemented with native background location support by adding required permissions and permission checks
+  - on Android by providing a custom service that wraps existing native location API calls in a foreground service
+- Update Android SDK to Android 10/Q (API level 29)
+- Updated sample application to include the background mode
+- Various bug fixing
+
 ## [3.1.0] 09 October 2020
 
 - Do not throw errors from methods that do not need an activity.
 - [BREAKING] The error thrown is now ActivityNotFoundException which changes the error code
-returned when activity is not found. It used to be NO_ACTIVITY, now it is just error. We
-anticipate this error to be rarely experienced in the wild.
+  returned when activity is not found. It used to be NO_ACTIVITY, now it is just error. We
+  anticipate this error to be rarely experienced in the wild.
 
 ## [3.0.3] 25th August 2020
 
@@ -11,7 +24,7 @@ anticipate this error to be rarely experienced in the wild.
 
 ## [3.0.2] 23rd April 2020
 
-- Fix crashes on v1 apps. 
+- Fix crashes on v1 apps.
 
 ## [3.0.1] 27th March 2020
 
