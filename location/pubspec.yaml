@@ -25,8 +25,7 @@ dependencies:
   flutter:
     sdk: flutter
   location_platform_interface: ^1.0.1
-  location_web:
-    path: ../location_web
+  location_web: ^1.0.0
   meta: ^1.0.5
 
 dev_dependencies:
